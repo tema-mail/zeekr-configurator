@@ -218,3 +218,10 @@ dialog::backdrop { background: rgba(10,12,16,.45); backdrop-filter: blur(3px); }
 }
 
 .thumb { width: 64px; height: 48px; object-fit: cover; border-radius: 8px; flex-shrink: 0; background: var(--soft); }
+
+/* Зал за машиной пёстрый: затемнение сверху, чтобы читались название и переключатель вида */
+.viewer::before { content: ''; position: absolute; inset: 0 0 auto 0; height: 170px; z-index: 1; pointer-events: none;
+  background: linear-gradient(rgba(12,12,14,.55), rgba(12,12,14,0)); }
+.viewer-top { z-index: 2; }
+.viewer-top h1, .viewer-top p { color: #fff; text-shadow: 0 1px 8px rgba(0,0,0,.35); }
+.hint { color: rgba(255,255,255,.85); text-shadow: 0 1px 6px rgba(0,0,0,.5); }

@@ -89,8 +89,11 @@
       "logo": "assets/stage/logo.png",
       "glow": "assets/stage/logo-glow.png",
       "logoAspect": 0.1736986301369863,
-      "logoWidth": 7.5,
-      "logoHeight": 3.5
+      "logoWidth": 5.2,
+      "logoHeight": 3.5,
+      "type": "loft",
+      "dir": "assets/stage",
+      "minPolar": 0.85
     }
   },
   "steps": [

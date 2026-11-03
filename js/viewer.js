@@ -5,6 +5,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { buildStage } from './stage.js';
+import { buildLoft, loftEnvironment } from './loft.js';
 
 const DRACO_PATH = 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/libs/draco/gltf/';
 
@@ -54,7 +55,10 @@ export class Viewer {
     this.ground = ground;
 
     if (modelConfig.stage) {
-      this.stage = buildStage(renderer, modelConfig.stage);
+      const st = modelConfig.stage;
+      this.stage = st.type === 'loft'
+        ? buildLoft(renderer, st, room => { this.scene.environment = loftEnvironment(renderer, room, this.scene.environment); })
+        : buildStage(renderer, st);
       this.scene.add(this.stage);
     }
 
@@ -144,7 +148,7 @@ export class Viewer {
     const setLimits = () => {
       c.minDistance = inside ? 0.01 : 3.2;
       c.maxDistance = inside ? 0.1 : (this.stage ? 14 : 16);
-      c.minPolarAngle = inside ? 0.3 : 0.2;
+      c.minPolarAngle = inside ? 0.3 : (this.cfg.stage?.minPolar ?? 0.2);
       c.maxPolarAngle = inside ? Math.PI - 0.3 : Math.PI / 2 - 0.04;
     };
     c.minDistance = 0; c.maxDistance = Infinity;
