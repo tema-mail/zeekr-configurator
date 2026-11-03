@@ -84,6 +84,13 @@
         "interior": "black-orange"
       },
       "note": "Панорама салона показана в цвете «Чёрный с оранжевым»"
+    },
+    "stage": {
+      "logo": "assets/stage/logo.png",
+      "glow": "assets/stage/logo-glow.png",
+      "logoAspect": 0.1736986301369863,
+      "logoWidth": 7.5,
+      "logoHeight": 3.5
     }
   },
   "steps": [

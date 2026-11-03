@@ -4,6 +4,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { buildStage } from './stage.js';
 
 const DRACO_PATH = 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/libs/draco/gltf/';
 
@@ -39,6 +40,7 @@ export class Viewer {
     sun.shadow.mapSize.set(2048, 2048);
     Object.assign(sun.shadow.camera, { left: -4, right: 4, top: 4, bottom: -4, near: 1, far: 20 });
     sun.shadow.radius = 6;
+    sun.shadow.bias = -0.0005;
     this.scene.add(sun);
 
     const ground = new THREE.Mesh(
@@ -46,9 +48,15 @@ export class Viewer {
       new THREE.ShadowMaterial({ opacity: 0.28 })
     );
     ground.rotation.x = -Math.PI / 2;
+    ground.position.y = 0.003;
     ground.receiveShadow = true;
     this.scene.add(ground);
     this.ground = ground;
+
+    if (modelConfig.stage) {
+      this.stage = buildStage(renderer, modelConfig.stage);
+      this.scene.add(this.stage);
+    }
 
     const controls = new OrbitControls(this.camera, renderer.domElement);
     controls.enableDamping = true;
@@ -135,7 +143,7 @@ export class Viewer {
     // Ограничения ставим после перелёта, иначе они «зажмут» камеру по дороге.
     const setLimits = () => {
       c.minDistance = inside ? 0.01 : 3.2;
-      c.maxDistance = inside ? 0.1 : 16;
+      c.maxDistance = inside ? 0.1 : (this.stage ? 14 : 16);
       c.minPolarAngle = inside ? 0.3 : 0.2;
       c.maxPolarAngle = inside ? Math.PI - 0.3 : Math.PI / 2 - 0.04;
     };
@@ -149,7 +157,9 @@ export class Viewer {
     if (!inside) {
       // На узком экране отодвигаем камеру, чтобы машина целиком влезала по ширине.
       const k = THREE.MathUtils.clamp(1.7 / this.camera.aspect, 1, 2.4);
-      toCam.sub(toTgt).multiplyScalar(k).add(toTgt);
+      toCam.sub(toTgt).multiplyScalar(k);
+      if (this.stage) toCam.clampLength(0, 14);   // не выходить за купол стенда
+      toCam.add(toTgt);
     }
     if (inside) {
       // OrbitControls вращает камеру вокруг цели; ставим камеру на сиденье, цель — чуть впереди.
@@ -185,6 +195,7 @@ export class Viewer {
   updatePano() {
     const on = !!(this.inside && this.panoDir);
     if (this.car) this.car.visible = !on;
+    if (this.stage) this.stage.visible = !on;
     if (this.panoBox) this.panoBox.visible = on;
     if (!on) return;
     let group = this.panoCache[this.panoDir];
