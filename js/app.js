@@ -43,11 +43,13 @@ async function init() {
   renderTotal();
 
   viewer = new Viewer($('#stage'), data.model);
+  updatePano();
   $('#view-ext').onclick = () => setView('exterior');
   $('#view-int').onclick = () => setView('interior');
   try {
     await viewer.load(p => { $('#loader-bar').style.width = `${Math.round(p * 100)}%`; });
     for (const stepId of Object.keys(MATERIAL_STEPS)) applyMaterial(stepId);
+    updatePano();
     $('#loader').classList.add('done');
   } catch (e) {
     console.error(e);
@@ -97,6 +99,18 @@ function setView(name) {
   const inside = data.model.views[name]?.inside ?? name === 'interior';
   $('#view-ext').classList.toggle('active', !inside);
   $('#view-int').classList.toggle('active', inside);
+  updatePano();
+}
+
+// Панорама салона зависит от выбранного экрана; если выбран другой цвет салона, честно подписываем.
+function updatePano() {
+  const p = data.model.pano;
+  if (!p || !viewer) return;
+  viewer.setPano(p.dirs[state[p.step]] ?? Object.values(p.dirs)[0]);
+  const other = Object.entries(p.matches ?? {}).some(([k, v]) => state[k] !== v);
+  const note = $('#demo-notice');
+  note.textContent = p.note ?? '';
+  note.hidden = !(viewer.inside && other && p.note);
 }
 
 // ---------- Содержимое шага ----------
@@ -166,6 +180,7 @@ function pick(step, id) {
   } else {
     state[step.id] = id;
     if (MATERIAL_STEPS[step.id]) applyMaterial(step.id);
+    updatePano();
   }
   renderTabs();
   renderStep();

@@ -14,6 +14,9 @@ export class Viewer {
     this.targets = {};       // имя группы → массив материалов
     this.tweens = [];
     this.view = 'exterior';
+    this.panoDir = null;     // папка с 6 гранями панорамы салона (f, b, l, r, u, d)
+    this.panoCache = {};
+    this.inside = false;
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -74,6 +77,7 @@ export class Viewer {
     });
     this.scene.add(car);
     this.car = car;
+    this.updatePano();
     this.collectTargets();
   }
 
@@ -123,6 +127,8 @@ export class Viewer {
     this.view = name;
     const c = this.controls;
     const inside = v.inside ?? name === 'interior';
+    this.inside = inside;
+    this.updatePano();
     c.autoRotate = false;
     c.enableZoom = !inside;
     c.rotateSpeed = inside ? -0.35 : 0.8;   // изнутри тянем «картинку», а не камеру
@@ -136,7 +142,7 @@ export class Viewer {
     c.minDistance = 0; c.maxDistance = Infinity;
     c.minPolarAngle = 0; c.maxPolarAngle = Math.PI;
     if (this.ground) this.ground.visible = !inside;
-    const fromFov = this.camera.fov, toFov = inside ? 70 : 36;
+    const fromFov = this.camera.fov, toFov = inside ? (this.panoDir ? 85 : 70) : 36;
 
     const toCam = new THREE.Vector3(...v.camera);
     const toTgt = new THREE.Vector3(...v.target);
@@ -170,6 +176,46 @@ export class Viewer {
     });
   }
 
+  // Салон показываем фотопанорамой: фон-куб вместо 3D-модели.
+  setPano(dir) {
+    this.panoDir = dir || null;
+    this.updatePano();
+  }
+
+  updatePano() {
+    const on = !!(this.inside && this.panoDir);
+    if (this.car) this.car.visible = !on;
+    if (this.panoBox) this.panoBox.visible = on;
+    if (!on) return;
+    let group = this.panoCache[this.panoDir];
+    if (!group) {
+      // Шесть плоскостей вокруг камеры, каждая повёрнута лицом внутрь (раскладка граней krpano).
+      const ROT = { f: [0, 0, 0], b: [0, Math.PI, 0], r: [0, -Math.PI / 2, 0], l: [0, Math.PI / 2, 0], u: [Math.PI / 2, 0, 0], d: [-Math.PI / 2, 0, 0] };
+      const POS = { f: [0, 0, -1], b: [0, 0, 1], r: [1, 0, 0], l: [-1, 0, 0], u: [0, 1, 0], d: [0, -1, 0] };
+      const loader = new THREE.TextureLoader();
+      group = new THREE.Group();
+      for (const f of Object.keys(ROT)) {
+        const t = loader.load(`${this.panoDir}/${f}.jpg`);
+        t.colorSpace = THREE.SRGBColorSpace;
+        t.anisotropy = this.renderer.capabilities.getMaxAnisotropy();
+        const m = new THREE.Mesh(new THREE.PlaneGeometry(2, 2),
+          new THREE.MeshBasicMaterial({ map: t, depthWrite: false, toneMapped: false }));
+        m.position.set(...POS[f]);
+        m.rotation.set(...ROT[f]);
+        group.add(m);
+      }
+      group.scale.setScalar(10);
+      group.renderOrder = -1;
+      this.panoCache[this.panoDir] = group;
+    }
+    if (this.panoBox !== group) {
+      if (this.panoBox) this.scene.remove(this.panoBox);
+      this.panoBox = group;
+      this.scene.add(group);
+    }
+    group.visible = true;
+  }
+
   tween(ms, fn) {
     this.tweens.push({ start: performance.now(), ms, fn });
   }
@@ -181,6 +227,7 @@ export class Viewer {
       return k < 1;
     });
     this.controls.update();
+    if (this.panoBox?.visible) this.panoBox.position.copy(this.camera.position);
     this.renderer.render(this.scene, this.camera);
   }
 

@@ -56,7 +56,7 @@
         ],
         "target": [
           -0.42,
-          1.2,
+          0.86,
           -1.5
         ]
       },
@@ -67,12 +67,23 @@
           -0.05
         ],
         "target": [
-          -0.05,
-          1.05,
+          0,
+          0.75,
           -1.5
         ],
         "inside": true
       }
+    },
+    "pano": {
+      "step": "screen",
+      "dirs": {
+        "single": "assets/panos/single",
+        "dual": "assets/panos/dual"
+      },
+      "matches": {
+        "interior": "black-orange"
+      },
+      "note": "Панорама салона показана в цвете «Чёрный с оранжевым»"
     }
   },
   "steps": [
