@@ -1,0 +1,137 @@
+{
+  "_comment": "Все цены — без НДС. Итог считается как сумма × (1 + vat). Цифры демонстрационные, заменить на реальные от заказчика.",
+  "title": "Zeekr 8X",
+  "subtitle": "Конфигуратор",
+  "currency": "€",
+  "locale": "ru-RU",
+  "vat": 0.19,
+  "vatLabel": "вкл. НДС 19%",
+
+  "model": {
+    "_comment": "Чтобы подставить настоящую модель: положить .glb в assets/models и поменять url. Имена в targets — это имена мешей (nodes) или материалов внутри .glb.",
+    "url": "assets/models/placeholder.glb",
+    "demoNotice": "Демо-модель. Настоящая 3D-модель Zeekr 8X будет добавлена позже",
+    "scale": 1,
+    "targets": {
+      "paint":    { "nodes": ["body"], "materials": ["Body_Color"] },
+      "rims":     { "nodes": ["rim_fl", "rim_fr", "rim_rl", "rim_rr"] },
+      "interior": { "materials": ["Leather", "Leather_red"] },
+      "glass":    { "materials": ["Glass_Gray"] }
+    },
+    "views": {
+      "exterior": { "camera": [4.6, 1.6, -4.4], "target": [0, 0.55, 0] },
+      "interior": { "camera": [-0.35, 1.0, 0.1], "target": [-0.35, 0.9, -1.5] },
+      "dashboard": { "camera": [0, 1.02, 0.2], "target": [-0.05, 0.8, -1.5], "inside": true }
+    }
+  },
+
+  "steps": [
+    {
+      "id": "edition",
+      "title": "Комплектация",
+      "type": "single",
+      "view": "exterior",
+      "options": [
+        {
+          "id": "stellar",
+          "name": "Stellar Version",
+          "price": 83490,
+          "specs": [
+            { "value": "330 км", "label": "Запас хода на электричестве (CLTC)" },
+            { "value": "2,96 с", "label": "Разгон 0–100 км/ч" },
+            { "value": "1 381 л.с.", "label": "Пиковая мощность" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "paint",
+      "title": "Цвет кузова",
+      "type": "single",
+      "view": "exterior",
+      "options": [
+        { "id": "black", "name": "Polar Night Black", "price": 0,   "color": "#0d0e10", "metalness": 0.9, "roughness": 0.18 },
+        { "id": "blue",  "name": "Hunting Sky Blue",  "price": 0,   "color": "#3d6f9e", "metalness": 0.9, "roughness": 0.2 },
+        { "id": "white", "name": "Aurora White",      "price": 0,   "color": "#e9eaec", "metalness": 0.6, "roughness": 0.22 },
+        { "id": "grey",  "name": "Matte Stellar Grey","price": 130, "color": "#6b6f74", "metalness": 0.5, "roughness": 0.62 }
+      ]
+    },
+    {
+      "id": "rims",
+      "title": "Диски",
+      "type": "single",
+      "view": "exterior",
+      "options": [
+        { "id": "aero",   "name": "21″ Aero, серебро",       "price": 0,    "color": "#c9ccd0", "metalness": 1, "roughness": 0.25 },
+        { "id": "forged", "name": "22″ кованые, графит",     "price": 1800, "color": "#2b2d30", "metalness": 1, "roughness": 0.35 },
+        { "id": "bronze", "name": "22″ кованые, бронза",     "price": 2200, "color": "#8a6a45", "metalness": 1, "roughness": 0.3 }
+      ]
+    },
+    {
+      "id": "interior",
+      "title": "Салон",
+      "type": "single",
+      "view": "interior",
+      "options": [
+        { "id": "black-orange", "name": "Чёрный с оранжевым", "price": 0,   "color": "#c2541f", "swatch": ["#16171a", "#c2541f"] },
+        { "id": "black",        "name": "Полностью чёрный",   "price": 0,   "color": "#1c1d20", "swatch": ["#16171a", "#2a2b2e"] },
+        { "id": "ivory",        "name": "Слоновая кость",     "price": 900, "color": "#d9cdb8", "swatch": ["#d9cdb8", "#7a5a3c"] }
+      ]
+    },
+    {
+      "id": "screen",
+      "title": "Центральный экран",
+      "type": "single",
+      "view": "dashboard",
+      "options": [
+        { "id": "single", "name": "Один экран 16″",            "price": 0,   "note": "Мультимедиа и управление климатом" },
+        { "id": "dual",   "name": "Двойной экран 16″ + 16″",   "price": 650, "note": "Отдельный экран для пассажира" }
+      ]
+    },
+    {
+      "id": "options",
+      "title": "Опции",
+      "type": "multi",
+      "view": "exterior",
+      "options": [
+        { "id": "ceiling", "name": "Потолочный экран для второго ряда", "price": 1900 },
+        { "id": "audio",   "name": "Премиальная аудиосистема",          "price": 2400 },
+        { "id": "steps",   "name": "Электровыдвижные пороги",           "price": 1200 },
+        { "id": "winter",  "name": "Зимний пакет: подогрев всех мест",  "price": 800 }
+      ]
+    },
+    {
+      "id": "accessories",
+      "title": "Аксессуары",
+      "type": "multi",
+      "view": "exterior",
+      "options": [
+        { "id": "adapter", "name": "Адаптер для зарядки (EU)", "price": 950, "default": true },
+        { "id": "mats",    "name": "Коврики салона",           "price": 240 },
+        { "id": "wallbox", "name": "Домашняя зарядная станция 11 кВт", "price": 1100 }
+      ]
+    },
+    {
+      "id": "services",
+      "title": "Услуги",
+      "type": "multi",
+      "view": "exterior",
+      "options": [
+        { "id": "approval", "name": "Сертификация и допуск к дорогам ЕС", "price": 1500, "default": true },
+        { "id": "warranty", "name": "Гарантия и сервис на 2 года",         "price": 4000, "default": true },
+        { "id": "delivery", "name": "Доставка до клиента",                 "price": 3500, "default": true }
+      ]
+    },
+    {
+      "id": "payment",
+      "title": "Оплата",
+      "type": "single",
+      "view": "exterior",
+      "options": [
+        { "id": "cash",   "name": "Полная оплата", "price": 0, "note": "Один платёж при заказе" },
+        { "id": "credit", "name": "Кредит",        "price": 0, "note": "Первый взнос 20%, 60 месяцев, 7,9% годовых",
+          "credit": { "downPayment": 0.2, "months": 60, "rate": 0.079 } }
+      ]
+    }
+  ]
+}
