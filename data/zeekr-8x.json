@@ -94,7 +94,45 @@
       "type": "loft",
       "dir": "assets/stage",
       "minPolar": 0.85
-    }
+    },
+    "openables": [
+      {
+        "key": "Door_LF",
+        "group": "doors",
+        "axis": "y",
+        "angle": -65
+      },
+      {
+        "key": "Door_LB",
+        "group": "doors",
+        "axis": "y",
+        "angle": -65
+      },
+      {
+        "key": "Door_RF",
+        "group": "doors",
+        "axis": "y",
+        "angle": 65
+      },
+      {
+        "key": "Door_RB",
+        "group": "doors",
+        "axis": "y",
+        "angle": 65
+      },
+      {
+        "key": "Hood",
+        "group": "Hood",
+        "axis": "x",
+        "angle": 55
+      },
+      {
+        "key": "Trunk",
+        "group": "Trunk",
+        "axis": "x",
+        "angle": -80
+      }
+    ]
   },
   "steps": [
     {

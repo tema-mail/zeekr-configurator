@@ -92,6 +92,72 @@ export class Viewer {
     this.car = car;
     this.updatePano();
     this.collectTargets();
+    if (this.cfg.openables) this.setupOpenables();
+  }
+
+  // Двери, капот, багажник: узлы-петли из модели крутятся вокруг своей оси (model.openables в JSON).
+  setupOpenables() {
+    this.openables = [];
+    for (const o of this.cfg.openables) {
+      const pivot = this.car.getObjectByName(o.key);
+      if (!pivot) { console.warn(`[viewer] нет узла ${o.key}`); continue; }
+      const axis = new THREE.Vector3(o.axis === 'x' ? 1 : 0, o.axis === 'y' ? 1 : 0, o.axis === 'z' ? 1 : 0);
+      const item = { ...o, pivot, base: pivot.quaternion.clone(), axis, t: 0, to: 0 };
+      pivot.traverse(m => {
+        if (!m.isMesh) return;
+        m.userData.openGroup = o.group;
+        m.material.side = THREE.DoubleSide;   // изнутри открытой двери не должно быть «дыры»
+      });
+      this.openables.push(item);
+    }
+    const bar = document.createElement('div');
+    bar.className = 'open-bar';
+    const sync = () => { for (const b of bar.children) b.classList.toggle('on', this.isOpen(b.dataset.key)); };
+    for (const [key, label] of [['doors', 'Двери'], ['Trunk', 'Багажник'], ['Hood', 'Капот']]) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = label;
+      b.dataset.key = key;
+      b.onclick = () => { this.toggleOpen(key); sync(); };
+      bar.appendChild(b);
+    }
+    this.container.appendChild(bar);
+    this.openBar = bar;
+    const ray = new THREE.Raycaster(), pt = new THREE.Vector2(), el = this.renderer.domElement;
+    let down = null;
+    el.addEventListener('pointerdown', e => { down = [e.clientX, e.clientY]; });
+    el.addEventListener('pointerup', e => {
+      if (!down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 5 || this.inside) return;
+      const r = el.getBoundingClientRect();
+      pt.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+      ray.setFromCamera(pt, this.camera);
+      const hit = ray.intersectObject(this.car, true).find(h => h.object.visible);
+      const g = hit?.object.userData.openGroup;
+      if (!g) return;
+      // Клик по двери открывает только её, по капоту/багажнику – их.
+      let node = hit.object;
+      while (node && !this.openables.some(o => o.pivot === node)) node = node.parent;
+      const item = this.openables.find(o => o.pivot === node);
+      if (item) item.to = item.to ? 0 : 1;
+      sync();
+    });
+  }
+
+  toggleOpen(group) {
+    const items = this.openables.filter(o => o.group === group);
+    const open = !items.some(o => o.to === 1);
+    for (const o of items) o.to = open ? 1 : 0;
+  }
+
+  isOpen(group) { return this.openables.some(o => o.group === group && o.to === 1); }
+
+  updateOpenables(dt) {
+    for (const o of this.openables ?? []) {
+      if (o.t === o.to) continue;
+      o.t = o.to > o.t ? Math.min(o.to, o.t + dt / 1.1) : Math.max(o.to, o.t - dt / 1.1);
+      const e = o.t < 0.5 ? 2 * o.t * o.t : 1 - Math.pow(-2 * o.t + 2, 2) / 2;
+      o.pivot.quaternion.copy(o.base).multiply(new THREE.Quaternion().setFromAxisAngle(o.axis, THREE.MathUtils.degToRad(o.angle) * e));
+    }
   }
 
   // Находит материалы для каждой группы из конфига: по имени узла (вместе с детьми) или по имени материала.
@@ -155,6 +221,7 @@ export class Viewer {
     c.minDistance = 0; c.maxDistance = Infinity;
     c.minPolarAngle = 0; c.maxPolarAngle = Math.PI;
     if (this.ground) this.ground.visible = !inside;
+    if (this.openBar) this.openBar.hidden = inside;
     const fromFov = this.camera.fov, toFov = inside ? (this.panoDir ? 85 : 70) : 36;
 
     const toCam = new THREE.Vector3(...v.camera);
@@ -278,6 +345,9 @@ export class Viewer {
   }
 
   tick(now) {
+    const dt = Math.min(0.3, (now - (this.lastT ?? now)) / 1000);
+    this.lastT = now;
+    this.updateOpenables(dt);
     this.tweens = this.tweens.filter(t => {
       const k = Math.min(1, (now - t.start) / t.ms);
       t.fn(k);
