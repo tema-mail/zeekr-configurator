@@ -225,3 +225,12 @@ dialog::backdrop { background: rgba(10,12,16,.45); backdrop-filter: blur(3px); }
 .viewer-top { z-index: 2; }
 .viewer-top h1, .viewer-top p { color: #fff; text-shadow: 0 1px 8px rgba(0,0,0,.35); }
 .hint { color: rgba(255,255,255,.85); text-shadow: 0 1px 6px rgba(0,0,0,.5); }
+
+/* Зум «+ / −» у правого края 3D: еле видно, проявляется при наведении */
+.zoom-bar { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); z-index: 3; display: flex; flex-direction: column; gap: 2px;
+  padding: 3px; border-radius: 999px; background: rgba(255,255,255,.14); backdrop-filter: blur(6px); opacity: .35; transition: opacity .2s; }
+.zoom-bar:hover, .zoom-bar:focus-within { opacity: .95; }
+.zoom-bar button { width: 34px; height: 34px; border: 0; border-radius: 50%; background: transparent; color: #fff; font: 500 20px/1 inherit;
+  cursor: pointer; touch-action: none; user-select: none; text-shadow: 0 1px 4px rgba(0,0,0,.5); }
+.zoom-bar button:hover { background: rgba(255,255,255,.18); }
+@media (hover: none) { .zoom-bar { opacity: .5; } }

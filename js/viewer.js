@@ -70,6 +70,7 @@ export class Viewer {
     controls.addEventListener('start', () => { controls.autoRotate = false; });
     this.controls = controls;
 
+    this.setupZoom();
     new ResizeObserver(() => this.resize()).observe(container);
     this.resize();
     this.applyView('exterior', true);
@@ -229,6 +230,47 @@ export class Viewer {
       this.scene.add(group);
     }
     group.visible = true;
+  }
+
+  // Боковая панель «+ / −»: снаружи камера ближе/дальше к машине, в салоне – уже/шире угол обзора.
+  setupZoom() {
+    const bar = document.createElement('div');
+    bar.className = 'zoom-bar';
+    let timer = null;
+    const stop = () => { clearInterval(timer); timer = null; };
+    for (const [label, dir, title] of [['+', -1, 'Приблизить'], ['−', 1, 'Отдалить']]) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = label;
+      b.title = title;
+      b.setAttribute('aria-label', title);
+      b.addEventListener('pointerdown', e => {
+        e.preventDefault();
+        this.zoomStep(dir);
+        stop();
+        timer = setInterval(() => this.zoomStep(dir, 0.35, true), 30);   // зажать – непрерывный зум
+      });
+      for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) b.addEventListener(ev, stop);
+      bar.appendChild(b);
+    }
+    this.container.appendChild(bar);
+  }
+
+  zoomStep(dir, k = 1, instant = false) {
+    const c = this.controls;
+    c.autoRotate = false;
+    if (this.inside) {
+      this.camera.fov = THREE.MathUtils.clamp(this.camera.fov + dir * 6 * k, 35, 100);
+      this.camera.updateProjectionMatrix();
+      return;
+    }
+    const off = this.camera.position.clone().sub(c.target);
+    const d = THREE.MathUtils.clamp(off.length() * (1 + dir * 0.14 * k), c.minDistance, c.maxDistance);
+    if (instant) { this.camera.position.copy(c.target).add(off.setLength(d)); return; }
+    this.tween(160, t => {
+      const cur = this.camera.position.clone().sub(c.target);
+      this.camera.position.copy(c.target).add(cur.setLength(cur.length() + (d - cur.length()) * t));
+    });
   }
 
   tween(ms, fn) {
