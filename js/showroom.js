@@ -285,9 +285,9 @@ const wantPos = new THREE.Vector3(), wantLook = new THREE.Vector3();
 function aimCamera() {
   const portrait = camera.aspect < 1;
   if (focus >= 0) {
-    // Выбранная машина крупно: справа от карточки, на телефоне над ней.
-    const x = cars[focus].x, off = portrait ? 0 : -1.5;
-    wantPos.set(x + off + mx * 0.25, portrait ? 2.6 : 1.9, portrait ? 14 : 8.8);
+    // Выбранная машина чуть крупнее ряда (в 1,3 раза): по центру, рядом с карточкой, на телефоне над ней.
+    const x = cars[focus].x, off = 0;
+    wantPos.set(x + off + mx * 0.25, portrait ? 2.6 : 1.9, portrait ? 14 : 10.8);
     wantLook.set(x + off, portrait ? -0.2 : 1.1, 0);
   } else {
     wantPos.set(pan + mx * 0.9, portrait ? 2.2 : 2.4, portrait ? 12 : 14);
