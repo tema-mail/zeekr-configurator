@@ -100,6 +100,11 @@ if ins:
 for o in sc.objects:
     for m in o.modifiers:
         if m.type=='SUBSURF': m.levels=level; m.render_levels=level
+# Лёгкая версия для ряда машин на /showroom/ (аргумент lite, уровень сглаживания 0): прореживаем шины, суппорты и салон.
+if 'lite' in sys.argv:
+    for o in sc.objects:
+        if o.type=='MESH' and o.name.startswith(('Tire','Cylinder','Radiator','Interior','Wheel_WHT')):
+            d=o.modifiers.new('lite','DECIMATE'); d.ratio=0.25
 # 3. перед машины в +Y Blender (= -Z в three.js), колёса на полу, по центру
 R=Matrix.Rotation(math.pi,4,'Z')
 for o in [o for o in sc.objects if not o.parent]: o.matrix_world = R @ o.matrix_world
