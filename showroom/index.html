@@ -28,7 +28,8 @@
     .panel[hidden] { display: block; opacity: 0; transform: translateY(10px); pointer-events: none; }
     #hero { width: min(620px, calc(100vw - 32px)); }
     #hero h1 { margin: 0 0 10px; font-size: clamp(32px, 3.9vw, 56px); line-height: 1; font-weight: 800; letter-spacing: -.02em; }
-    #hero h1 em { font-style: normal; color: #ff5a1f; }
+    #hero h1 em { font-style: normal; color: #5fd4c9; }
+    #hero h2 { margin: 0 0 12px; font-size: clamp(18px, 1.7vw, 24px); font-weight: 600; }
     #hero p { margin: 0; font-size: 15px; line-height: 1.5; opacity: .75; max-width: 420px; }
     #card { padding: 20px; border-radius: 16px; background: rgba(14,15,18,.86); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,.08); }
     #card small { font-size: 12px; opacity: .55; }
@@ -38,13 +39,13 @@
     #card dt { font-size: 15px; font-weight: 700; white-space: nowrap; }
     #card dd { margin: 2px 0 0; font-size: 11px; opacity: .55; }
     #card dl div:first-child dt { color: #fff; }
-    #open { width: 100%; padding: 13px 18px; border: 0; border-radius: 999px; background: #ff5a1f; color: #fff; font: 700 14px Manrope, sans-serif; cursor: pointer; }
+    #open { width: 100%; padding: 13px 18px; border: 0; border-radius: 999px; background: #0b4442; color: #fff; box-shadow: inset 0 0 0 1px #5fd4c9; font: 700 14px Manrope, sans-serif; cursor: pointer; }
     #loader { position: fixed; inset: 0; z-index: 5; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; background: #050506; transition: opacity .6s; }
     #loader.done { opacity: 0; pointer-events: none; }
     #loader img { width: min(420px, 70vw); margin: -20px 0; }
     #loader .row { width: min(360px, 70vw); display: flex; justify-content: space-between; font-size: 13px; opacity: .8; }
     #loader .track { width: min(360px, 70vw); height: 4px; border-radius: 4px; background: #1c1d20; overflow: hidden; }
-    #bar { width: 0; height: 100%; background: linear-gradient(90deg, #ff3d1f, #ff9a3d); transition: width .2s; }
+    #bar { width: 0; height: 100%; background: linear-gradient(90deg, #0b4442, #5fd4c9); transition: width .2s; }
     @media (max-width: 700px) { header { padding: 16px; } header span { display: none; } .panel { left: 16px; bottom: 16px; } }
     #fade { position: fixed; inset: 0; z-index: 6; background: #f4f5f7; opacity: 0; pointer-events: none; transition: opacity .45s; }
     #fade.on { opacity: 1; }
@@ -54,8 +55,9 @@
   <div id="stage"></div>
   <header><img src="../assets/stage/logo.png" alt="Evolution Car"><span>Шоурум · тестовый стенд</span></header>
   <section id="hero" class="panel">
-    <h1>Семь цветов.<br>Выберите <em>свой.</em></h1>
-    <p>Нажмите на машину, чтобы собрать её в конфигураторе. Двигайте ряд колёсиком, стрелками или перетаскиванием.</p>
+    <h1>Твой Zeekr 8X<br><em>ждёт тебя</em></h1>
+    <h2>Осталось собрать его под себя</h2>
+    <p>Нажми на машину и попадёшь в конфигуратор. Ряд двигается колёсиком или мышкой.</p>
   </section>
   <section id="card" class="panel" hidden>
     <small id="bay"></small>

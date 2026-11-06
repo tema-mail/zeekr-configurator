@@ -178,7 +178,7 @@ const paints = data.showroom.cars.map(c => (c.color ? c : step('paint').options.
 const edition = step('edition').options[0];
 const fmt = new Intl.NumberFormat(data.locale, { maximumFractionDigits: 0 });
 
-if (coarse) $('#hero p').textContent = 'Нажмите на машину, чтобы собрать её в конфигураторе. Листайте ряд пальцем.';
+if (coarse) $('#hero p').textContent = 'Нажми на машину и попадёшь в конфигуратор. Ряд листается пальцем.';
 const stage = $('#stage');
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, coarse ? 1.5 : 1.75));
