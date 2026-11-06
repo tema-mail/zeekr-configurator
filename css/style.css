@@ -241,3 +241,13 @@ dialog::backdrop { background: rgba(10,12,16,.45); backdrop-filter: blur(3px); }
 .open-bar[hidden] { display: none; }
 .open-bar button { border: 0; background: transparent; padding: 7px 14px; border-radius: 999px; font: inherit; font-size: 13px; color: #1a1b1e; cursor: pointer; }
 .open-bar button.on { background: #1a1b1e; color: #fff; }
+
+/* Режим без фона (?plain=1): светлый фон, поэтому подписи и зум снова тёмные */
+.plain .viewer::before { display: none; }
+.plain .viewer-top h1 { color: inherit; text-shadow: none; }
+.plain .viewer-top p { color: #6b6f76; text-shadow: none; }
+.plain .hint { color: #8a8d93; text-shadow: none; }
+.plain .zoom-bar { background: rgba(20,21,24,.05); }
+.plain .zoom-bar button { color: #1a1b1e; text-shadow: none; }
+.plain .zoom-bar button:hover { background: rgba(20,21,24,.08); }
+.back-link { display: inline-block; margin-bottom: 10px; padding: 7px 14px; border-radius: 999px; background: #1a1b1e; color: #fff; font-size: 13px; text-decoration: none; }

@@ -395,5 +395,46 @@
         }
       ]
     }
-  ]
+  ],
+  "showroom": {
+    "_comment": "Ряд машин на странице /showroom/. id из шага paint или новый цвет – он появляется в конфигураторе только при переходе с этой машины.",
+    "cars": [
+      {
+        "id": "black"
+      },
+      {
+        "id": "blue"
+      },
+      {
+        "id": "white"
+      },
+      {
+        "id": "grey"
+      },
+      {
+        "id": "silver",
+        "name": "Серебристо-серый",
+        "price": 0,
+        "color": "#b2b0b4",
+        "metalness": 0.8,
+        "roughness": 0.25
+      },
+      {
+        "id": "platinum",
+        "name": "Платиново-коричневый",
+        "price": 0,
+        "color": "#4a3f36",
+        "metalness": 0.8,
+        "roughness": 0.25
+      },
+      {
+        "id": "wine",
+        "name": "Винно-красный",
+        "price": 0,
+        "color": "#4a1422",
+        "metalness": 0.8,
+        "roughness": 0.22
+      }
+    ]
+  }
 }

@@ -38,6 +38,8 @@ async function init() {
       : (step.options.find(o => o.default) ?? step.options[0]).id;
   }
 
+  applyUrlParams();
+
   renderTabs();
   renderStep();
   renderTotal();
@@ -54,6 +56,26 @@ async function init() {
   } catch (e) {
     console.error(e);
     $('#loader').innerHTML = '<p>Не удалось загрузить 3D-модель</p>';
+  }
+}
+
+// Переход со страницы /showroom/: конфигуратор без фона, в цвете выбранной машины, с кнопкой назад.
+function applyUrlParams() {
+  const q = new URLSearchParams(location.search);
+  if (!q.has('plain')) return;
+  delete data.model.stage;
+  document.body.classList.add('plain');
+  const paint = data.steps.find(s => s.id === 'paint');
+  const id = q.get('paint');
+  if (paint && id) {
+    const extra = data.showroom?.cars.find(c => c.id === id && c.color);
+    if (extra && !option(paint, id)) paint.options.push(extra);
+    if (option(paint, id)) state.paint = id;
+  }
+  if (q.get('back') === 'showroom') {
+    const a = el('a', 'back-link', '← Назад к машинам');
+    a.href = 'showroom/';
+    $('#car-title').before(a);
   }
 }
 
