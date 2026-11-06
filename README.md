@@ -24,7 +24,7 @@ python3 -m http.server 8000
 | `assets/panos/single`, `assets/panos/dual` | Панорамы салона 360° (по 6 граней 1280 px) для одного и двойного экрана, с конфигуратора Auto China. |
 | `js/loft.js` | Зал-лофт как салон Evolution Car (`model.stage.type: "loft"`): бетон с фото салона, кирпич, фермы, антресоль, зелень, ресепшн, логотип. Текстуры – `tools/make_loft_textures.py`. Откат к простому стенду: убрать `type` из `model.stage` или `git checkout backup-stand-v1`. |
 | `js/stage.js`, `assets/stage/` | Стенд-шоурум: купол, отражающий пол, подиум со светящимся кольцом, светящийся логотип Evolution Car (настройки – `model.stage` в JSON). |
-| `showroom/`, `js/showroom.js`, `assets/models/zeekr-8x-lite.glb` | Тестовый шоурум: тёмный гараж, ряд машин в разных цветах (список – `showroom.cars` в JSON). Клик открывает конфигуратор без фона: `?plain=1&back=showroom&paint=<id>`. |
+| `showroom/`, `js/showroom.js`, `assets/models/zeekr-8x-lite.glb` | Тестовый шоурум: тёмный гараж, ряд машин в разных цветах (список – `showroom.cars` в JSON). Наведение: остальные машины исчезают, выбранную можно крутить. Клик: машина уезжает вбок, затем конфигуратор без фона `?plain=1&back=showroom&paint=<id>`. |
 | `js/viewer.js` | 3D-сцена: свет, камера, перекраска частей модели, панорама салона. |
 | `js/app.js` | Шаги, выбор, пересчёт цены, форма заявки. |
 | `css/style.css` | Оформление. Цвета — в начале файла (`:root`). |

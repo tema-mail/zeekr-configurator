@@ -141,6 +141,7 @@ function buildBay(scene, i, x) {
   sh.position.set(x, 0.0025, 0);
   sh.renderOrder = 3;
   scene.add(sh);
+  return sh;
 }
 
 // ---------- Машины ----------
@@ -211,40 +212,90 @@ const shared = {
   interior: tinted(nodeMat('interior'), step('interior').options[0]),
 };
 const cx = i => (i - (paints.length - 1) / 2) * STEP;
+const cars = [];
 const hitboxes = [];
 const hitMat = new THREE.MeshBasicMaterial({ visible: false });
 paints.forEach((o, i) => {
   o.material = tinted(paintBase, o);
   const car = gltf.scene.clone(true);
   dressCar(car, o, data.model, shared);
+  // Свои материалы у каждой машины: остальные растворяются, пока выбрана одна.
+  const mats = new Map();
+  car.traverse(n => {
+    if (!n.isMesh) return;
+    if (!mats.has(n.material)) {
+      const m = n.material.clone();
+      mats.set(n.material, { m, op: m.opacity, tr: m.transparent });
+    }
+    n.material = mats.get(n.material).m;
+  });
   car.rotation.y = Math.PI;          // перед машины к зрителю
   car.position.x = cx(i);
   scene.add(car);
-  buildBay(scene, i, cx(i));
+  const shadow = buildBay(scene, i, cx(i));
   const box = new THREE.Mesh(new THREE.BoxGeometry(2.4, 1.9, 5.4), hitMat);
   box.position.set(cx(i), 0.95, 0);
   box.userData.index = i;
   scene.add(box);
   hitboxes.push(box);
+  cars.push({ root: car, shadow, box, x: cx(i), mats: [...mats.values()], f: 1, fTo: 1, yaw: 0, yawTo: 0, wheels: null });
 });
+
+function setFade(c, f) {
+  c.f = f;
+  c.root.visible = f > 0.01;
+  c.shadow.material.opacity = f;
+  for (const e of c.mats) {
+    const t = e.tr || f < 0.999;
+    if (e.m.transparent !== t) { e.m.transparent = t; e.m.needsUpdate = true; }
+    e.m.opacity = e.op * f;
+  }
+}
+
+// Колёса: собираем диск, шину и эмблему каждого угла в группу с центром на оси, чтобы они крутились.
+function prepWheels(c) {
+  if (c.wheels) return;
+  c.root.updateMatrixWorld(true);
+  c.wheels = [];
+  for (const k of ['Frnt_Rght', 'Frnt_Lft', 'Bck_Rght', 'Bck_Lft']) {
+    const tire = c.root.getObjectByName(`Tire_${k}`);
+    if (!tire) continue;
+    const center = new THREE.Box3().setFromObject(tire).getCenter(new THREE.Vector3());
+    const g = new THREE.Group();
+    c.root.add(g);
+    g.position.copy(c.root.worldToLocal(center));
+    g.updateMatrixWorld(true);
+    for (const pre of ['Tire_', 'Wheel_', 'Wheel_WHT_', 'Wheel_Logo_']) {
+      const n = c.root.getObjectByName(pre + k);
+      if (n) g.attach(n);
+    }
+    c.wheels.push(g);
+  }
+}
 
 // ---------- Камера и управление ----------
 const maxPan = cx(paints.length - 1);
-let pan = 0, panTo = 0, mx = 0, active = -1, leaving = null;
-const placeCamera = () => {
-  const portrait = camera.aspect < 1;
-  const dist = portrait ? 12 : 14;
-  camera.position.set(pan + mx * 0.9, portrait ? 2.2 : 2.4, dist);
-  camera.lookAt(pan + mx * 0.3, 1.5, 0);
-};
+const WHEEL_R = 0.39;
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+let pan = 0, panTo = 0, mx = 0, focus = -1, driving = null;
+let enterTimer = null, exitTimer = null, pendingCar = -1;
+const camPos = new THREE.Vector3(0, 2.4, 14), camLook = new THREE.Vector3(0, 1.5, 0);
+const wantPos = new THREE.Vector3(), wantLook = new THREE.Vector3();
 
-function showCar(i) {
-  if (i === active) return;
-  active = i;
-  $('#hero').hidden = i >= 0;
-  $('#card').hidden = i < 0;
-  renderer.domElement.style.cursor = i >= 0 ? 'pointer' : '';
-  if (i < 0) return;
+function aimCamera() {
+  const portrait = camera.aspect < 1;
+  if (focus >= 0) {
+    // Выбранная машина крупно: справа от карточки, на телефоне над ней.
+    const x = cars[focus].x, off = portrait ? 0 : -1.5;
+    wantPos.set(x + off + mx * 0.25, portrait ? 2.6 : 1.9, portrait ? 14 : 8.8);
+    wantLook.set(x + off, portrait ? -0.2 : 1.1, 0);
+  } else {
+    wantPos.set(pan + mx * 0.9, portrait ? 2.2 : 2.4, portrait ? 12 : 14);
+    wantLook.set(pan + mx * 0.3, 1.5, 0);
+  }
+}
+
+function fillCard(i) {
   const o = paints[i];
   $('#bay').textContent = `Бокс ${String(i + 1).padStart(2, '0')}`;
   $('#car-name').textContent = data.title;
@@ -254,61 +305,186 @@ function showCar(i) {
     edition.specs.slice(0, 2).map(s => `<div><dt>${s.value}</dt><dd>${s.label.split(' (')[0]}</dd></div>`).join('');
 }
 
-function openCar(i) {
-  if (leaving != null) return;
-  leaving = performance.now();
-  $('#fade').classList.add('on');
-  panTo = cx(i);
-  setTimeout(() => { location.href = `../?plain=1&back=showroom&paint=${encodeURIComponent(paints[i].id)}`; }, 480);
+let prefetched = false;
+function enterFocus(i) {
+  clearTimeout(exitTimer); exitTimer = null;
+  if (focus === i || driving) return;
+  if (focus >= 0) leaveCar(cars[focus]);
+  focus = i;
+  panTo = cars[i].x;
+  const c = cars[i];
+  c.box.scale.x = 2.2;                 // с поворотом машина шире
+  c.yawTo = 0.6;                       // показываем три четверти
+  cars.forEach((o, n) => { o.fTo = n === i ? 1 : 0; });
+  prepWheels(c);
+  fillCard(i);
+  $('#hero').hidden = true;
+  $('#card').hidden = false;
+  renderer.domElement.style.cursor = 'grab';
+  // Заранее подгружаем полную модель, чтобы конфигуратор открылся быстрее.
+  if (!prefetched) { prefetched = true; fetch('../assets/models/zeekr-8x.glb').catch(() => {}); }
 }
-$('#open').onclick = () => { if (active >= 0) openCar(active); };
+function leaveCar(c) { c.box.scale.x = 1; c.yawTo = 0; }
+function exitFocus() {
+  clearTimeout(exitTimer); exitTimer = null;
+  if (focus < 0 || driving) return;
+  leaveCar(cars[focus]);
+  focus = -1;
+  cars.forEach(o => { o.fTo = 1; });
+  $('#hero').hidden = false;
+  $('#card').hidden = true;
+  renderer.domElement.style.cursor = '';
+}
+
+function configuratorUrl(i) { return `../?plain=1&back=showroom&paint=${encodeURIComponent(paints[i].id)}`; }
+function startDrive(i) {
+  if (driving) return;
+  clearTimeout(enterTimer); clearTimeout(exitTimer); exitTimer = null;
+  if (reduced) {
+    $('#fade').classList.add('on');
+    setTimeout(() => { location.href = configuratorUrl(i); }, 480);
+    return;
+  }
+  if (focus !== i) enterFocus(i);
+  const c = cars[i];
+  // Из бокса вперёд, плавный поворот, дальше вбок за край кадра.
+  const z = 5.4;
+  const path = new THREE.CurvePath();
+  path.add(new THREE.CubicBezierCurve3(new THREE.Vector3(c.x, 0, 0), new THREE.Vector3(c.x, 0, 3.4),
+    new THREE.Vector3(c.x + 0.8, 0, z), new THREE.Vector3(c.x + 5.5, 0, z)));
+  path.add(new THREE.LineCurve3(new THREE.Vector3(c.x + 5.5, 0, z), new THREE.Vector3(c.x + 26, 0, z)));
+  driving = { c, i, path, len: path.getLength(), t: 0, u: 0, faded: false };
+  c.yawTo = 0;
+  $('#card').hidden = true;
+  renderer.domElement.style.cursor = '';
+}
+$('#open').onclick = () => { if (focus >= 0) startDrive(focus); };
+$('#card').addEventListener('pointerenter', () => { clearTimeout(exitTimer); exitTimer = null; });
+$('#card').addEventListener('pointerleave', () => { if (!coarse) armExit(); });
+function armExit() {
+  if (exitTimer || driving) return;
+  exitTimer = setTimeout(() => { exitTimer = null; exitFocus(); }, 800);
+}
 
 const ray = new THREE.Raycaster(), pt = new THREE.Vector2();
 const pick = e => {
   pt.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
   ray.setFromCamera(pt, camera);
-  return ray.intersectObjects(hitboxes)[0]?.object.userData.index ?? -1;
+  const list = focus >= 0 ? [cars[focus].box] : hitboxes;
+  return ray.intersectObjects(list)[0]?.object.userData.index ?? -1;
 };
 const clampPan = v => THREE.MathUtils.clamp(v, -maxPan, maxPan);
 let down = null;
 const el = renderer.domElement;
-el.addEventListener('pointerdown', e => { down = { x: e.clientX, y: e.clientY, pan: panTo, moved: false }; el.setPointerCapture(e.pointerId); });
+el.addEventListener('pointerdown', e => {
+  down = { x: e.clientX, y: e.clientY, pan: panTo, moved: false, yaw: focus >= 0 ? cars[focus].yawTo : 0, overCar: focus >= 0 && pick(e) === focus };
+  el.setPointerCapture(e.pointerId);
+});
 el.addEventListener('pointermove', e => {
   mx = coarse ? 0 : (e.clientX / innerWidth) * 2 - 1;
   if (down) {
     const dx = e.clientX - down.x;
     if (Math.abs(dx) > 6) down.moved = true;
-    if (down.moved) panTo = clampPan(down.pan - dx * 0.025);
+    if (!down.moved || driving) return;
+    if (focus >= 0) {
+      cars[focus].yawTo = down.yaw + dx * 0.009;   // крутим выбранную машину
+      el.style.cursor = 'grabbing';
+    } else {
+      panTo = clampPan(down.pan - dx * 0.025);
+    }
     return;
   }
-  if (!coarse) showCar(pick(e));
+  if (coarse || driving) return;
+  const i = pick(e);
+  if (focus >= 0) {
+    if (i === focus) { clearTimeout(exitTimer); exitTimer = null; } else armExit();
+    return;
+  }
+  if (i !== pendingCar) {
+    pendingCar = i;
+    clearTimeout(enterTimer);
+    if (i >= 0) enterTimer = setTimeout(() => enterFocus(i), 160);
+  }
 });
 el.addEventListener('pointerup', e => {
-  const wasClick = down && !down.moved;
+  const d = down;
   down = null;
-  if (!wasClick) return;
+  if (focus >= 0 && !driving) el.style.cursor = 'grab';
+  if (!d || d.moved) return;
   const i = pick(e);
-  if (i >= 0) openCar(i);
+  if (focus >= 0) {
+    if (i === focus) startDrive(focus);
+    else if (coarse) exitFocus();
+  } else if (i >= 0) {
+    if (coarse) enterFocus(i); else startDrive(i);     // на телефоне первый тап выбирает, второй увозит
+  }
 });
-addEventListener('wheel', e => { panTo = clampPan(panTo + (e.deltaY + e.deltaX) * 0.012); }, { passive: true });
+addEventListener('wheel', e => {
+  if (driving) return;
+  exitFocus();
+  panTo = clampPan(panTo + (e.deltaY + e.deltaX) * 0.012);
+}, { passive: true });
 addEventListener('keydown', e => {
-  if (e.key === 'ArrowRight') panTo = clampPan(panTo + STEP);
-  if (e.key === 'ArrowLeft') panTo = clampPan(panTo - STEP);
+  if (driving) return;
+  if (e.key === 'Escape') exitFocus();
+  if (e.key === 'ArrowRight') { exitFocus(); panTo = clampPan(panTo + STEP); }
+  if (e.key === 'ArrowLeft') { exitFocus(); panTo = clampPan(panTo - STEP); }
 });
 addEventListener('resize', () => {
   renderer.setSize(innerWidth, innerHeight);
   camera.aspect = innerWidth / innerHeight;
   camera.updateProjectionMatrix();
 });
-// Возврат кнопкой «назад» из браузера: страница восстанавливается из кэша с белой шторкой.
-addEventListener('pageshow', () => { leaving = null; $('#fade').classList.remove('on'); });
+// Возврат кнопкой «назад» браузера из кэша: машина уже уехала, начинаем заново.
+addEventListener('pageshow', e => { if (e.persisted) location.reload(); });
 
+function stepDrive(dt) {
+  const d = driving, c = d.c;
+  d.t += dt;
+  // Сначала выпрямляется в боксе, затем разгон.
+  if (d.t < 0.4) return;
+  const t = (d.t - 0.4) / 2.1;
+  const u = Math.min(1, t * t);
+  const ds = (u - d.u) * d.len;
+  d.u = u;
+  const p = d.path.getPointAt(u), tan = d.path.getTangentAt(u);
+  c.root.position.set(p.x, 0, p.z);
+  const heading = Math.atan2(-tan.x, -tan.z);
+  c.root.rotation.y = heading;
+  c.shadow.position.set(p.x, c.shadow.position.y, p.z);
+  c.shadow.rotation.z = heading;
+  for (const w of c.wheels ?? []) w.rotation.x -= ds / WHEEL_R;
+  if (!d.faded && t > 0.72) { d.faded = true; $('#fade').classList.add('on'); }
+  if (t >= 1 && !d.gone) { d.gone = true; location.href = configuratorUrl(d.i); }
+}
+
+// Шейдеры для растворения готовим заранее, иначе на первом наведении будет рывок.
+cars.forEach(c => c.mats.forEach(e => { e.m.transparent = true; }));
+renderer.compile(scene, camera);
+cars.forEach(c => c.mats.forEach(e => { e.m.transparent = e.tr; }));
+
+const clock = new THREE.Clock();
 let shown = false;
 renderer.setAnimationLoop(() => {
-  pan += (panTo - pan) * 0.08;
-  placeCamera();
-  // На телефоне наведения нет: карточка у машины по центру, когда ряд сдвинули.
-  if (coarse && Math.abs(panTo) > 0.5) showCar(Math.round(pan / STEP + (paints.length - 1) / 2));
+  const dt = Math.min(0.1, clock.getDelta());
+  pan += (panTo - pan) * Math.min(1, dt * 5);
+  for (const c of cars) {
+    if (c.f !== c.fTo) {
+      const n = c.fTo > c.f ? Math.min(c.fTo, c.f + dt / 0.35) : Math.max(c.fTo, c.f - dt / 0.35);
+      setFade(c, n);
+    }
+    if (!(driving && driving.c === c && driving.t >= 0.4)) {
+      c.yaw += (c.yawTo - c.yaw) * Math.min(1, dt * (driving?.c === c ? 9 : 5));
+      c.root.rotation.y = Math.PI + c.yaw;
+    }
+  }
+  if (driving) stepDrive(dt);
+  aimCamera();
+  const k = Math.min(1, dt * 3.2);
+  camPos.lerp(wantPos, k);
+  camLook.lerp(wantLook, k);
+  camera.position.copy(camPos);
+  camera.lookAt(camLook);
   renderer.render(scene, camera);
   if (!shown) { shown = true; setTimeout(() => $('#loader').classList.add('done'), 300); }
 });
