@@ -86,10 +86,16 @@
       "note": "Панорама салона показана в цвете «Чёрный с оранжевым»"
     },
     "stage": {
-      "type": "pano",
-      "image": "../assets/salon/pano.webp",
-      "height": 4.84,
-      "radius": 14.0
+      "type": "hall",
+      "size": 22,
+      "height": 7,
+      "floor": "../assets/stage/concrete.jpg",
+      "walls": {
+        "back": "../assets/salon/wall-back.webp",
+        "front": "../assets/salon/wall-front.webp",
+        "left": "../assets/salon/wall-left.webp",
+        "right": "../assets/salon/wall-right.webp"
+      }
     },
     "openables": [
       {

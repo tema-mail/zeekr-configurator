@@ -1,12 +1,12 @@
 // 3D-сцена: загрузка модели, свет, камера, перекраска частей.
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { GroundProjectedSkybox } from 'three/addons/objects/GroundProjectedSkybox.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { buildStage } from '../../js/stage.js';
 import { buildLoft, loftEnvironment } from '../../js/loft.js';
+import { buildHall, hallEnvironment } from './hall.js';
 
 const DRACO_PATH = 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/libs/draco/gltf/';
 
@@ -55,8 +55,8 @@ export class Viewer {
     this.scene.add(ground);
     this.ground = ground;
 
-    if (modelConfig.stage?.type === 'pano') {
-      this.setupPanoStage(modelConfig.stage, sun, ground, pmrem);
+    if (modelConfig.stage?.type === 'hall') {
+      this.setupHall(modelConfig.stage, sun, ground);
 
     } else if (modelConfig.stage) {
       const st = modelConfig.stage;
@@ -81,27 +81,19 @@ export class Viewer {
     renderer.setAnimationLoop(t => this.tick(t));
   }
 
-  // Салон панорамой 360°: купол с плоским полом вокруг машины. Камера ходит везде, салон поворачивается вместе с ней,
-  // отражения в кузове – из этой же панорамы.
-  setupPanoStage(st, sun, ground, pmrem) {
+  // Большой зал салона: 3D-коробка с фото-стенами (hall.js). Камера ходит везде, как в лофте.
+  setupHall(st, sun, ground) {
     this.photo = true;            // салон в окнах затемнён (см. setMaterial)
-    this.panoRoom = true;
+    this.hall = { half: (st.size ?? 22) / 2, height: st.height ?? 7 };
     sun.position.set(0.6, 10, 1.2);
-    sun.intensity = 1.6;
-    this.renderer.toneMappingExposure = 1.15;
-    this.scene.add(new THREE.HemisphereLight('#fff6ea', '#5c5a55', 1.0));
-    ground.material.opacity = 0.4;
-    new THREE.TextureLoader().load(st.image, t => {
-      t.mapping = THREE.EquirectangularReflectionMapping;
-      t.colorSpace = THREE.SRGBColorSpace;
-      t.anisotropy = this.renderer.capabilities.getMaxAnisotropy();
-      const R = st.radius ?? 42;
-      const sky = new GroundProjectedSkybox(t, { height: st.height ?? 2.2, radius: R });
-      sky.scale.setScalar(R);
-      this.scene.add(sky);
-      this.sky = sky;
-      this.scene.environment = pmrem.fromEquirectangular(t).texture;
+    sun.intensity = 1.5;
+    this.renderer.toneMappingExposure = 1.1;
+    ground.material.opacity = 0.38;
+    this.stage = buildHall(this.renderer, st, room => {
+      this.scene.environment = hallEnvironment(this.renderer, room, this.scene.environment);
     });
+    this.hallCeiling = this.stage.getObjectByName('ceiling');
+    this.scene.add(this.stage);
   }
 
   async load(onProgress) {
@@ -245,8 +237,8 @@ export class Viewer {
     c.rotateSpeed = inside ? -0.35 : 0.8;   // изнутри тянем «картинку», а не камеру
     // Ограничения ставим после перелёта, иначе они «зажмут» камеру по дороге.
     const setLimits = () => {
-      if (this.panoRoom && !inside) {
-        c.minDistance = 3.2; c.maxDistance = 10;     // не выходить к стенам купола (радиус 14 м)
+      if (this.hall && !inside) {
+        c.minDistance = 3.2; c.maxDistance = this.hall.half - 2;     // не подходить к стенам
         c.minPolarAngle = 0.05; c.maxPolarAngle = Math.PI / 2 - 0.04;
         return;
       }
@@ -267,7 +259,7 @@ export class Viewer {
       // На узком экране отодвигаем камеру, чтобы машина целиком влезала по ширине.
       const k = THREE.MathUtils.clamp(1.7 / this.camera.aspect, 1, 2.4);
       toCam.sub(toTgt).multiplyScalar(k);
-      if (this.stage || this.panoRoom) toCam.clampLength(0, this.panoRoom ? 10 : 14);   // не выходить за купол
+      if (this.stage) toCam.clampLength(0, this.hall ? this.hall.half - 2 : 14);   // не выходить за стены
       toCam.add(toTgt);
     }
     if (inside) {
@@ -305,7 +297,6 @@ export class Viewer {
     const on = !!(this.inside && this.panoDir);
     if (this.car) this.car.visible = !on;
     if (this.stage) this.stage.visible = !on;
-    if (this.sky) this.sky.visible = !on;
     if (this.panoBox) this.panoBox.visible = on;
     if (!on) return;
     let group = this.panoCache[this.panoDir];
@@ -392,6 +383,8 @@ export class Viewer {
       return k < 1;
     });
     this.controls.update();
+    // Вид сверху: прячем потолок с фермами, чтобы он не закрывал машину.
+    if (this.hallCeiling) this.hallCeiling.visible = this.camera.position.y < this.hall.height - 1.9;
     if (this.panoBox?.visible) this.panoBox.position.copy(this.camera.position);
     this.renderer.render(this.scene, this.camera);
   }
