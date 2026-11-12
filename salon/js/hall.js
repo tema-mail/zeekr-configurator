@@ -11,12 +11,12 @@ export function buildHall(renderer, opts, onReady) {
   const manager = new THREE.LoadingManager(() => onReady?.(room));
   const loader = new THREE.TextureLoader(manager);
   const aniso = renderer.capabilities.getMaxAnisotropy();
-  const tex = (url, rx = 1, ry = 1, mirror = false) => {
+  const tex = (url, rx = 1, ry = 1) => {
     const t = loader.load(url);
     t.colorSpace = THREE.SRGBColorSpace;
     t.anisotropy = aniso;
     if (rx !== 1 || ry !== 1) {
-      t.wrapS = t.wrapT = mirror ? THREE.MirroredRepeatWrapping : THREE.RepeatWrapping;
+      t.wrapS = t.wrapT = THREE.RepeatWrapping;   // без зеркальной раскладки
       t.repeat.set(rx, ry);
     }
     return t;
@@ -42,7 +42,7 @@ export function buildHall(renderer, opts, onReady) {
   mirror.name = 'mirror';
   room.add(mirror);
   const concrete = new THREE.Mesh(new THREE.PlaneGeometry(HALF * 2, HALF * 2),
-    new THREE.MeshStandardMaterial({ map: tex(opts.floor, 3, 3, true), color: '#8f8a82', roughness: 0.5, transparent: true, opacity: 0.93 }));
+    new THREE.MeshStandardMaterial({ map: tex(opts.floor, 3, 3), color: '#8f8a82', roughness: 0.5, transparent: true, opacity: 0.93 }));
   concrete.rotation.x = -Math.PI / 2;
   concrete.position.y = -0.002;
   concrete.receiveShadow = true;

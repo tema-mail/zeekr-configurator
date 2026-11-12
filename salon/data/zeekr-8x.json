@@ -89,7 +89,7 @@
       "type": "hall",
       "size": 22,
       "height": 7,
-      "floor": "../assets/stage/concrete.jpg",
+      "floor": "../assets/salon/concrete.webp",
       "walls": {
         "back": "../assets/salon/wall-back.webp",
         "front": "../assets/salon/wall-front.webp",
