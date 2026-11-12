@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Конфигуратор – салон Evolution Car</title>
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="data:,">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/style.css">
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+</head>
+<body>
+  <main class="layout">
+    <section class="viewer">
+      <div id="stage"></div>
+      <div class="viewer-top">
+        <div>
+          <h1 id="car-title"></h1>
+          <p id="edition-line"></p>
+        </div>
+        <div class="view-switch">
+          <button id="view-ext" class="active">3D экстерьер</button>
+          <button id="view-int">Салон 360°</button>
+        </div>
+      </div>
+      <p class="hint">Потяните, чтобы повернуть</p>
+      <p id="demo-notice" class="demo-notice" hidden></p>
+      <div id="loader"><div class="loader-track"><div id="loader-bar"></div></div><p>Загружаем 3D-модель…</p></div>
+    </section>
+
+    <aside class="panel">
+      <nav id="steps" class="steps"></nav>
+      <div id="options" class="options"></div>
+
+      <div id="summary" class="summary">
+        <button id="summary-toggle" class="summary-toggle">Ваша комплектация</button>
+        <dl id="summary-list"></dl>
+      </div>
+
+      <footer class="total-bar">
+        <div class="total">
+          <span id="total-label">Итого</span>
+          <b id="total"></b>
+          <small id="total-vat"></small>
+        </div>
+        <div class="nav-buttons">
+          <button id="prev" class="btn ghost" aria-label="Назад">←</button>
+          <button id="next" class="btn">Далее</button>
+        </div>
+      </footer>
+    </aside>
+  </main>
+
+  <dialog id="lead">
+    <form id="lead-form" method="dialog">
+      <button type="button" class="close" onclick="this.closest('dialog').close()" aria-label="Закрыть">✕</button>
+      <h3>Оставить заявку</h3>
+      <p>Менеджер свяжется с вами и уточнит детали заказа.</p>
+      <label>Имя<input name="name" required autocomplete="name"></label>
+      <label>Телефон<input name="phone" type="tel" required autocomplete="tel"></label>
+      <button class="btn" type="submit">Отправить</button>
+    </form>
+  </dialog>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
