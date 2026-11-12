@@ -38,13 +38,13 @@
     "views": {
       "exterior": {
         "camera": [
-          4.6,
-          1.5,
+          5.2,
+          1.9,
           -5.0
         ],
         "target": [
           0,
-          1.2,
+          0.8,
           0
         ]
       },
@@ -86,9 +86,10 @@
       "note": "Панорама салона показана в цвете «Чёрный с оранжевым»"
     },
     "stage": {
-      "type": "photo",
-      "image": "../assets/salon/bg1.webp",
-      "env": "../assets/salon/env.webp"
+      "type": "pano",
+      "image": "../assets/salon/pano.webp",
+      "height": 4.84,
+      "radius": 14.0
     },
     "openables": [
       {

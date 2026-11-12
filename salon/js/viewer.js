@@ -1,6 +1,7 @@
 // 3D-сцена: загрузка модели, свет, камера, перекраска частей.
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { GroundProjectedSkybox } from 'three/addons/objects/GroundProjectedSkybox.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
@@ -54,8 +55,9 @@ export class Viewer {
     this.scene.add(ground);
     this.ground = ground;
 
-    if (modelConfig.stage?.type === 'photo') {
-      this.setupPhotoStage(modelConfig.stage, sun, ground, pmrem);
+    if (modelConfig.stage?.type === 'pano') {
+      this.setupPanoStage(modelConfig.stage, sun, ground, pmrem);
+
     } else if (modelConfig.stage) {
       const st = modelConfig.stage;
       this.stage = st.type === 'loft'
@@ -79,40 +81,27 @@ export class Viewer {
     renderer.setAnimationLoop(t => this.tick(t));
   }
 
-  // Фото салона за машиной: картинка – фоном контейнера (заполняет экран), она же – отражения в кузове.
-  // Тень падает на фото через прозрачный пол, камера ходит только по кругу на высоте съёмки фото.
-  setupPhotoStage(st, sun, ground, pmrem) {
-    this.photo = true;
-    Object.assign(this.container.style, { background: `#2a2b2d url("${st.image}") center 62% / cover no-repeat` });
+  // Салон панорамой 360°: купол с плоским полом вокруг машины. Камера ходит везде, салон поворачивается вместе с ней,
+  // отражения в кузове – из этой же панорамы.
+  setupPanoStage(st, sun, ground, pmrem) {
+    this.photo = true;            // салон в окнах затемнён (см. setMaterial)
+    this.panoRoom = true;
     sun.position.set(0.6, 10, 1.2);
-    sun.intensity = 1.8;
-    // Светлее, чем в 3D-зале: на фото салон светлый, тёмная машина иначе сливается с фоном.
-    this.renderer.toneMappingExposure = 1.25;
-    this.scene.add(new THREE.HemisphereLight('#fff6ea', '#5c5a55', 1.3));
-    const rim = new THREE.DirectionalLight('#fff1dc', 1.2);
-    rim.position.set(-6, 4, 6);
-    this.scene.add(rim);
-    ground.material.opacity = 0.42;
-    // Мягкое пятно под машиной, чтобы она стояла на полу, а не висела.
-    const c = document.createElement('canvas');
-    c.width = 128; c.height = 256;
-    const g = c.getContext('2d');
-    g.translate(64, 128); g.scale(1, 2);
-    const r = g.createRadialGradient(0, 0, 6, 0, 0, 64);
-    r.addColorStop(0, 'rgba(0,0,0,.75)'); r.addColorStop(0.6, 'rgba(0,0,0,.45)'); r.addColorStop(1, 'rgba(0,0,0,0)');
-    g.fillStyle = r; g.beginPath(); g.arc(0, 0, 64, 0, Math.PI * 2); g.fill();
-    const blob = new THREE.Mesh(new THREE.PlaneGeometry(2.9, 6.1), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthWrite: false }));
-    blob.rotation.x = -Math.PI / 2;
-    blob.position.y = 0.004;
-    this.scene.add(blob);
-    this.photoBlob = blob;
-    if (st.env) {
-      new THREE.TextureLoader().load(st.env, t => {
-        t.mapping = THREE.EquirectangularReflectionMapping;
-        t.colorSpace = THREE.SRGBColorSpace;
-        this.scene.environment = pmrem.fromEquirectangular(t).texture;
-      });
-    }
+    sun.intensity = 1.6;
+    this.renderer.toneMappingExposure = 1.15;
+    this.scene.add(new THREE.HemisphereLight('#fff6ea', '#5c5a55', 1.0));
+    ground.material.opacity = 0.4;
+    new THREE.TextureLoader().load(st.image, t => {
+      t.mapping = THREE.EquirectangularReflectionMapping;
+      t.colorSpace = THREE.SRGBColorSpace;
+      t.anisotropy = this.renderer.capabilities.getMaxAnisotropy();
+      const R = st.radius ?? 42;
+      const sky = new GroundProjectedSkybox(t, { height: st.height ?? 2.2, radius: R });
+      sky.scale.setScalar(R);
+      this.scene.add(sky);
+      this.sky = sky;
+      this.scene.environment = pmrem.fromEquirectangular(t).texture;
+    });
   }
 
   async load(onProgress) {
@@ -256,10 +245,9 @@ export class Viewer {
     c.rotateSpeed = inside ? -0.35 : 0.8;   // изнутри тянем «картинку», а не камеру
     // Ограничения ставим после перелёта, иначе они «зажмут» камеру по дороге.
     const setLimits = () => {
-      if (this.photo && !inside) {
-        const pol = Math.acos(THREE.MathUtils.clamp((toCam.y - toTgt.y) / toCam.distanceTo(toTgt), -1, 1));
-        c.minPolarAngle = c.maxPolarAngle = pol;   // горизонт фото не съезжает
-        c.minDistance = 4.6; c.maxDistance = 9.5;
+      if (this.panoRoom && !inside) {
+        c.minDistance = 3.2; c.maxDistance = 10;     // не выходить к стенам купола (радиус 14 м)
+        c.minPolarAngle = 0.05; c.maxPolarAngle = Math.PI / 2 - 0.04;
         return;
       }
       c.minDistance = inside ? 0.01 : 3.2;
@@ -279,7 +267,7 @@ export class Viewer {
       // На узком экране отодвигаем камеру, чтобы машина целиком влезала по ширине.
       const k = THREE.MathUtils.clamp(1.7 / this.camera.aspect, 1, 2.4);
       toCam.sub(toTgt).multiplyScalar(k);
-      if (this.stage) toCam.clampLength(0, 14);   // не выходить за купол стенда
+      if (this.stage || this.panoRoom) toCam.clampLength(0, this.panoRoom ? 10 : 14);   // не выходить за купол
       toCam.add(toTgt);
     }
     if (inside) {
@@ -317,7 +305,7 @@ export class Viewer {
     const on = !!(this.inside && this.panoDir);
     if (this.car) this.car.visible = !on;
     if (this.stage) this.stage.visible = !on;
-    if (this.photoBlob) this.photoBlob.visible = !on;
+    if (this.sky) this.sky.visible = !on;
     if (this.panoBox) this.panoBox.visible = on;
     if (!on) return;
     let group = this.panoCache[this.panoDir];
